@@ -1,7 +1,7 @@
 {
   "name": "STUDYFLO",
   "description": "Plan, focus, learn, and grow with STUDYFLO — an offline-first study management app with syllabus tracking, Pomodoro focus timer, spaced-repetition flashcards, notes, study circles, and shareable progress reports.",
-  "requestFramePermissions": ["microphone"],
+  "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
   ]
