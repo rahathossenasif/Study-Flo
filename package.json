@@ -1,7 +1,7 @@
 {
-  "name": "react-example",
+  "name": "studyflo",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -9,9 +9,15 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android",
+    "cap:build": "npm run build && npx cap sync android",
+    "android:build": "cd android && ./gradlew assembleDebug"
   },
   "dependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
     "@google/genai": "^3.6.1",
     "@tailwindcss/vite": "^4.3.3",
     "@types/d3": "^7.4.3",
@@ -28,6 +34,7 @@
     "ws": "^8.23.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
     "@types/react": "^19.3.0",
