@@ -2,5 +2,17 @@
   "appId": "com.studyflo.app",
   "appName": "STUDYFLO",
   "webDir": "dist",
-  "backgroundColor": "#080817"
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#080817",
+      "showSpinner": false
+    }
+  }
 }
