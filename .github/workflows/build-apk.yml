@@ -11,6 +11,7 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,7 +19,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -27,38 +28,27 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Install dependencies
         run: bun install
 
       - name: Install Capacitor
-        run: bun add @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6
-
-      - name: Build web app
-        run: bun run build
-
-      - name: Create Android project
-        run: npx cap add android
-
-      - name: Sync web files into Android project
-        run: npx cap sync android
-
-      - name: Build debug APK
-        working-directory: android
         run: |
-          chmod +x ./gradlew
-          ./gradlew assembleDebug
+          bun add @capacitor/core@^6.2.0 @capacitor/android@^6.2.0
+          bun add -d @capacitor/cli@^6.2.0
 
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: STUDYFLO-debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Publish APK to Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ github.run_number }}
-          name: STUDYFLO build ${{ github.run_number }}
-          files: android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Create Capacitor config (only if missing)
+        run: |
+          if [ ! -f capacitor.config.ts ] && [ ! -f capacitor.config.json ] && [ ! -f capacitor.config.js ]; then
+            cat > capacitor.config.json <<'JSON'
+          {
+            "appId": "com.studyflo.app",
+            "appName": "STUDYFLO",
+            "webDir": "dist"
+          }
+          JSON
+          fi
