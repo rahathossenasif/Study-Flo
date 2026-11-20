@@ -180,7 +180,7 @@ export function ProgressReportView() {
               gradientFrom="#06B6D4"
               gradientTo="#7C3AED"
             >
-              <span className="font-mono text-3xl font-bold tabular-nums text-slate-900 dark:text-white">
+              <span className="font-display text-3xl font-bold tabular-nums text-slate-900 dark:text-white">
                 {metrics.overallProgress}%
               </span>
               <span className="text-[11px] text-slate-500 dark:text-slate-300 mt-1">Mastery</span>
@@ -188,13 +188,13 @@ export function ProgressReportView() {
 
             <div className="space-y-4 text-center sm:text-left">
               <div>
-                <p className="font-mono text-3xl font-bold tabular-nums text-slate-900 dark:text-white">
+                <p className="font-display text-3xl font-bold tabular-nums text-slate-900 dark:text-white">
                   {metrics.weeklyHours.toFixed(1)}h
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-300">This Week</p>
               </div>
               <div>
-                <p className="font-mono text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                <p className="font-display text-3xl font-bold tabular-nums text-amber-600 dark:text-amber-400">
                   {state.profile.streakDays} Days
                 </p>
                 <p className="text-xs text-slate-500 dark:text-slate-300">Active Streak</p>

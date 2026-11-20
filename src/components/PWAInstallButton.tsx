@@ -29,6 +29,7 @@ export function PWAInstallButton({ variant = 'sidebar' }: PWAInstallButtonProps)
       const ok = await install();
       if (ok) {
         showToast(t.pwa.installed);
+        window.dispatchEvent(new CustomEvent('studyflo:open-welcome'));
       }
       return;
     }

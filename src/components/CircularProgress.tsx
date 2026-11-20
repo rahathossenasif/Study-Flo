@@ -66,8 +66,7 @@ export function CircularProgress({
           strokeDasharray={circumference}
           initial={{ strokeDashoffset: circumference }}
           animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
-          className="drop-shadow-[0_0_6px_rgba(135,59,255,0.28)]"
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         />
       </svg>
 
@@ -75,8 +74,8 @@ export function CircularProgress({
         {children ?? (
           <>
             <span
-              className="font-mono font-bold tabular-nums text-slate-900 dark:text-white leading-none"
-              style={{ fontSize: Math.max(13, Math.round(size * 0.22)) }}
+              className="font-display font-bold tabular-nums text-slate-900 dark:text-white leading-none tracking-tight"
+              style={{ fontSize: Math.max(13, Math.round(size * 0.23)) }}
             >
               {label ?? `${Math.round(clamped)}%`}
             </span>

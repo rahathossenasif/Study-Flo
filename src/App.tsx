@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useId, useLayoutEffect, useState } from 'react';
 import {
   LayoutGrid,
   BookMarked,
@@ -14,11 +14,15 @@ import {
   BrainCircuit,
   UserRound,
   Globe,
+  Grip,
+  X,
+  Target,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { StudyFlowProvider, useStudyFlow } from './context/StudyFlowContext';
 import { NavTab, SubjectAccent } from './types/studyflow';
 import { DashboardView } from './components/DashboardView';
+import { DailyGoalView } from './components/DailyGoalView';
 import { SyllabusView } from './components/SyllabusView';
 import { FocusTimerView } from './components/FocusTimerView';
 import { NotesView } from './components/NotesView';
@@ -29,9 +33,15 @@ import { SettingsView } from './components/SettingsView';
 import { AIAssistantView } from './components/AIAssistantView';
 import { ProfileView } from './components/ProfileView';
 import { OfflineIndicator } from './components/PWAInstallButton';
+import { InstallWelcomeModal } from './components/InstallWelcomeModal';
 
 /** Unique bespoke STUDYFLO emblem: kinetic S-flow ribbon + glowing focus node inside a sculpted prism */
 function StudyFlowLogo({ size = 30 }: { size?: number }) {
+  const uid = useId().replace(/:/g, '');
+  const bgId = `${uid}-bg`;
+  const ribbonId = `${uid}-ribbon`;
+  const rimId = `${uid}-rim`;
+
   return (
     <svg
       width={size}
@@ -43,27 +53,27 @@ function StudyFlowLogo({ size = 30 }: { size?: number }) {
       className="shrink-0 drop-shadow-[0_4px_14px_rgba(135,59,255,0.38)]"
     >
       <defs>
-        <linearGradient id="sfPrismBg" x1="3" y1="3" x2="37" y2="37" gradientUnits="userSpaceOnUse">
+        <linearGradient id={bgId} x1="3" y1="3" x2="37" y2="37" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#1E1148" />
           <stop offset="52%" stopColor="#873BFF" />
           <stop offset="100%" stopColor="#16C7D9" />
         </linearGradient>
-        <linearGradient id="sfRibbon" x1="10" y1="9" x2="30" y2="31" gradientUnits="userSpaceOnUse">
+        <linearGradient id={ribbonId} x1="10" y1="9" x2="30" y2="31" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#FFFFFF" />
           <stop offset="58%" stopColor="#E9D5FF" />
           <stop offset="100%" stopColor="#67E8F9" />
         </linearGradient>
-        <linearGradient id="sfRim" x1="4" y1="2" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+        <linearGradient id={rimId} x1="4" y1="2" x2="36" y2="36" gradientUnits="userSpaceOnUse">
           <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45" />
           <stop offset="50%" stopColor="#C4B5FD" stopOpacity="0.16" />
           <stop offset="100%" stopColor="#16C7D9" stopOpacity="0.45" />
         </linearGradient>
       </defs>
-      <rect x="2" y="2" width="36" height="36" rx="12" fill="url(#sfPrismBg)" />
-      <rect x="2.75" y="2.75" width="34.5" height="34.5" rx="11.25" stroke="url(#sfRim)" strokeWidth="1.4" />
+      <rect x="2" y="2" width="36" height="36" rx="12" fill={`url(#${bgId})`} />
+      <rect x="2.75" y="2.75" width="34.5" height="34.5" rx="11.25" stroke={`url(#${rimId})`} strokeWidth="1.4" />
       <path
         d="M27.5 13.5C27.5 11.4 24.4 10 20.4 10C15.8 10 12.8 12.1 12.8 14.9C12.8 17.8 15.6 19.1 20.2 20.1C24.9 21.1 27.6 22.4 27.6 25.4C27.6 28.4 24.4 30.2 19.6 30.2C15.5 30.2 12.6 28.6 12.2 26.4"
-        stroke="url(#sfRibbon)"
+        stroke={`url(#${ribbonId})`}
         strokeWidth="3.4"
         strokeLinecap="round"
       />
@@ -82,6 +92,7 @@ const PRIMARY_TABS: { id: NavTab; label: string; icon: React.ComponentType<{ cla
 ];
 
 const SECONDARY_TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'goals', label: 'Daily Goal', icon: Target },
   { id: 'assistant', label: 'AI Assistant', icon: BrainCircuit },
   { id: 'flashcards', label: 'Flashcards', icon: GalleryVerticalEnd },
   { id: 'progress', label: 'Progress Report', icon: TrendingUp },
@@ -111,6 +122,56 @@ function StudyFlowShell() {
     toast,
   } = useStudyFlow();
   const isBn = (state.profile.language ?? 'en') === 'bn';
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const MOBILE_MAIN_TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'home', label: 'Home', icon: LayoutGrid },
+    { id: 'syllabus', label: 'Syllabus', icon: BookMarked },
+    { id: 'focus', label: 'Focus', icon: Timer },
+    { id: 'notes', label: 'Notes', icon: NotebookPen },
+  ];
+
+  const MOBILE_MENU_TABS: { id: NavTab; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+    { id: 'circle', label: 'Circle', icon: UsersRound },
+    { id: 'assistant', label: 'AI Assistant', icon: BrainCircuit },
+    { id: 'flashcards', label: 'Flashcards', icon: GalleryVerticalEnd },
+    { id: 'progress', label: 'Progress Report', icon: TrendingUp },
+    { id: 'settings', label: 'Settings', icon: SlidersHorizontal },
+    { id: 'profile', label: 'My Profile', icon: UserRound },
+  ];
+
+  const isMenuTabActive =
+    activeTab === 'goals' ||
+    MOBILE_MENU_TABS.some((item) => item.id === activeTab && item.id !== 'profile');
+
+  const dailyGoalTargetMin = Math.max(15, state.profile.dailyGoalMinutes || 120);
+  const dailyGoalPercent = Math.min(100, Math.round((metrics.todayMinutes / dailyGoalTargetMin) * 100));
+  const dailyGoalReached = metrics.todayMinutes >= dailyGoalTargetMin;
+  const formatCompactHm = (mins: number) => {
+    const safe = Math.max(0, Math.round(mins));
+    const h = Math.floor(safe / 60);
+    const m = safe % 60;
+    if (h === 0) return `${m}m`;
+    if (m === 0) return `${h}h`;
+    return `${h}h ${m}m`;
+  };
+
+  const scrollToPageTop = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' as ScrollBehavior });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  };
+
+  // Always start every tab/view from the very top of the page
+  useLayoutEffect(() => {
+    scrollToPageTop();
+  }, [activeTab]);
+
+  const handleMobileNav = (tab: NavTab) => {
+    setMobileMenuOpen(false);
+    setActiveTab(tab);
+    scrollToPageTop();
+  };
 
   // Auto-join shared Study Circle room link (?room=CODE)
   useEffect(() => {
@@ -141,6 +202,8 @@ function StudyFlowShell() {
     switch (id) {
       case 'home':
         return t.nav.home;
+      case 'goals':
+        return isBn ? 'দৈনিক লক্ষ্য' : 'Daily Goal';
       case 'syllabus':
         return t.nav.syllabus;
       case 'focus':
@@ -168,6 +231,8 @@ function StudyFlowShell() {
     switch (activeTab) {
       case 'home':
         return <DashboardView />;
+      case 'goals':
+        return <DailyGoalView />;
       case 'syllabus':
         return <SyllabusView />;
       case 'focus':
@@ -204,46 +269,33 @@ function StudyFlowShell() {
 
   return (
     <div className="min-h-screen bg-transparent text-slate-900 dark:text-[#F4F5FA] flex overflow-x-clip">
-      {/* Desktop Premium Glass Sidebar Navigation */}
-      <aside className="hidden lg:flex lg:flex-col lg:w-[272px] lg:fixed lg:inset-y-0 lg:left-0 bg-white/90 dark:bg-[#0D0B1E]/92 backdrop-blur-2xl border-r border-slate-200/80 dark:border-[#873BFF]/15 shadow-[4px_0_32px_-14px_rgba(15,23,42,0.08)] dark:shadow-[8px_0_40px_-12px_rgba(0,0,0,0.65)] z-30">
-        {/* Subtle Top Edge Ambient Glow inside Sidebar */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute top-0 inset-x-0 h-32 opacity-0 dark:opacity-100"
-          style={{
-            background:
-              'radial-gradient(ellipse 80% 60% at 35% 0%, rgba(135, 59, 255, 0.16), transparent 72%)',
-          }}
-        />
-
+      {/* Desktop Refined Studio Sidebar Navigation */}
+      <aside className="hidden lg:flex lg:flex-col lg:w-[264px] lg:fixed lg:inset-y-0 lg:left-0 bg-white dark:bg-[#11101D] border-r border-slate-200/80 dark:border-white/[0.07] z-30">
         {/* Brand Header */}
-        <div className="relative z-10 px-5 pt-6 pb-5 border-b border-slate-200/60 dark:border-white/[0.06]">
+        <div className="relative z-10 px-5 pt-6 pb-5 border-b border-slate-200/70 dark:border-white/[0.06]">
           <button
             type="button"
             onClick={() => setActiveTab('home')}
-            className="group flex items-center gap-2 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#873BFF] rounded-xl"
+            className="group flex items-center gap-2.5 text-left cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C4DFF] rounded-xl"
           >
-            <span className="transition-transform duration-200 group-hover:scale-105 group-hover:-rotate-3">
-              <StudyFlowLogo size={34} />
+            <span className="transition-transform duration-150 group-hover:scale-105">
+              <StudyFlowLogo size={32} />
             </span>
             <div className="leading-none">
-              <span className="font-display text-[19px] font-extrabold tracking-[-0.04em] text-slate-900 dark:text-white inline-flex items-baseline">
+              <span className="font-display text-[18px] font-extrabold tracking-[-0.03em] text-slate-900 dark:text-white inline-flex items-baseline">
                 STUDY
-                <span className="bg-gradient-to-r from-[#873BFF] via-[#7C5CFF] to-[#16C7D9] bg-clip-text text-transparent">
-                  FLO
-                </span>
-                <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-[#16C7D9] -translate-y-0.5" />
+                <span className="text-[#7C4DFF] dark:text-[#A78BFA]">FLO</span>
               </span>
-              <p className="text-[10.5px] font-medium text-slate-500 dark:text-slate-400 leading-none mt-1.5 tracking-[0.01em]">
+              <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-none mt-1.5">
                 {t.tagline}
               </p>
             </div>
           </button>
         </div>
 
-        {/* Navigation Links with Luminous Purple Gradient Active State */}
-        <nav className="relative z-10 flex-1 px-3.5 py-4 space-y-1 overflow-y-auto" aria-label="Primary navigation">
-          <p className="px-3 pb-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wide">
+        {/* Navigation Links with Clean Tactile Active State */}
+        <nav className="relative z-10 flex-1 px-3 py-4 space-y-1 overflow-y-auto" aria-label="Primary navigation">
+          <p className="px-3 pb-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
             {isBn ? 'মূল মেনু' : 'Workspace'}
           </p>
           {PRIMARY_TABS.map((item) => {
@@ -254,24 +306,24 @@ function StudyFlowShell() {
                 key={item.id}
                 type="button"
                 onClick={() => setActiveTab(item.id)}
-                className={`group relative w-full flex items-center gap-3 px-3.5 py-2.5 min-h-[44px] rounded-2xl text-[14px] font-medium transition-all duration-150 whitespace-nowrap cursor-pointer active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#873BFF] ${
+                className={`group relative w-full flex items-center gap-3 px-3 py-2.5 min-h-[42px] rounded-xl text-[13.5px] transition-colors duration-150 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C4DFF] ${
                   active
-                    ? 'text-white font-semibold'
-                    : 'text-slate-600 dark:text-slate-300/90 hover:bg-slate-100/85 dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-white'
+                    ? 'text-[#6D28D9] dark:text-white font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/80 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
                 {active && (
                   <motion.span
                     layoutId="desktopNavActive"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                    className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#873BFF] via-[#7535F0] to-[#5F2EE5] shadow-[0_8px_22px_-6px_rgba(135,59,255,0.62)] border border-white/20"
+                    transition={{ type: 'spring', stiffness: 460, damping: 36 }}
+                    className="absolute inset-0 rounded-xl bg-[#7C4DFF]/10 dark:bg-white/[0.08] border border-[#7C4DFF]/18 dark:border-white/[0.09]"
                   />
                 )}
                 <Icon
-                  className={`relative z-10 w-[18px] h-[18px] shrink-0 transition-transform duration-150 ${
+                  className={`relative z-10 w-[18px] h-[18px] shrink-0 ${
                     active
-                      ? 'stroke-[2.2]'
-                      : 'stroke-[1.9] text-slate-500 dark:text-slate-400 group-hover:text-[#873BFF] dark:group-hover:text-[#C4B5FD] group-hover:translate-x-0.5'
+                      ? 'stroke-[2.1] text-[#7C4DFF] dark:text-[#B794FF]'
+                      : 'stroke-[1.8] text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-200'
                   }`}
                 />
                 <span className="relative z-10 truncate">{getTabLabel(item.id, item.label)}</span>
@@ -279,9 +331,9 @@ function StudyFlowShell() {
             );
           })}
 
-          <div className="my-4 mx-2 border-t border-slate-200/70 dark:border-white/[0.07]" />
+          <div className="my-4 mx-2 border-t border-slate-200/70 dark:border-white/[0.06]" />
 
-          <p className="px-3 pb-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500 tracking-wide">
+          <p className="px-3 pb-1.5 text-[11px] font-semibold text-slate-400 dark:text-slate-500">
             {isBn ? 'টুলস ও প্রোফাইল' : 'Tools & Account'}
           </p>
           {SECONDARY_TABS.map((item) => {
@@ -292,33 +344,46 @@ function StudyFlowShell() {
                 key={item.id}
                 type="button"
                 onClick={() => setActiveTab(item.id)}
-                className={`group relative w-full flex items-center justify-between gap-3 px-3.5 py-2.5 min-h-[44px] rounded-2xl text-[14px] font-medium transition-all duration-150 whitespace-nowrap cursor-pointer active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#873BFF] ${
+                className={`group relative w-full flex items-center justify-between gap-3 px-3 py-2.5 min-h-[42px] rounded-xl text-[13.5px] transition-colors duration-150 whitespace-nowrap cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7C4DFF] ${
                   active
-                    ? 'text-white font-semibold'
-                    : 'text-slate-600 dark:text-slate-300/90 hover:bg-slate-100/85 dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-white'
+                    ? 'text-[#6D28D9] dark:text-white font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 font-medium hover:bg-slate-100/80 dark:hover:bg-white/[0.04] hover:text-slate-900 dark:hover:text-slate-100'
                 }`}
               >
                 {active && (
                   <motion.span
                     layoutId="desktopNavActive"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                    className="absolute inset-0 rounded-2xl bg-gradient-to-r from-[#873BFF] via-[#7535F0] to-[#5F2EE5] shadow-[0_8px_22px_-6px_rgba(135,59,255,0.62)] border border-white/20"
+                    transition={{ type: 'spring', stiffness: 460, damping: 36 }}
+                    className="absolute inset-0 rounded-xl bg-[#7C4DFF]/10 dark:bg-white/[0.08] border border-[#7C4DFF]/18 dark:border-white/[0.09]"
                   />
                 )}
                 <span className="relative z-10 flex items-center gap-3 min-w-0">
                   <Icon
-                    className={`w-[18px] h-[18px] shrink-0 transition-transform duration-150 ${
+                    className={`w-[18px] h-[18px] shrink-0 ${
                       active
-                        ? 'stroke-[2.2]'
-                        : 'stroke-[1.9] text-slate-500 dark:text-slate-400 group-hover:text-[#873BFF] dark:group-hover:text-[#C4B5FD] group-hover:translate-x-0.5'
+                        ? 'stroke-[2.1] text-[#7C4DFF] dark:text-[#B794FF]'
+                        : 'stroke-[1.8] text-slate-400 dark:text-slate-500 group-hover:text-slate-700 dark:group-hover:text-slate-200'
                     }`}
                   />
                   <span className="truncate">{getTabLabel(item.id, item.label)}</span>
                 </span>
+                {item.id === 'goals' && (
+                  <span
+                    className={`relative z-10 font-display text-xs font-semibold tabular-nums shrink-0 ${
+                      dailyGoalReached
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : active
+                          ? 'text-[#7C4DFF] dark:text-[#C4B5FD]'
+                          : 'text-slate-500 dark:text-slate-400'
+                    }`}
+                  >
+                    {dailyGoalPercent}%
+                  </span>
+                )}
                 {item.id === 'flashcards' && metrics.dueFlashcardsCount > 0 && (
                   <span
-                    className={`relative z-10 font-mono text-xs font-semibold tabular-nums shrink-0 ${
-                      active ? 'text-purple-100' : 'text-[#873BFF] dark:text-[#C4B5FD]'
+                    className={`relative z-10 font-display text-xs font-semibold tabular-nums shrink-0 ${
+                      active ? 'text-[#7C4DFF] dark:text-[#C4B5FD]' : 'text-slate-500 dark:text-slate-400'
                     }`}
                   >
                     {metrics.dueFlashcardsCount}
@@ -390,175 +455,335 @@ function StudyFlowShell() {
       </aside>
 
       {/* Main Content Wrapper */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-[272px]">
-        {/* Refined Uncluttered Mobile Top Header */}
-        <header className="lg:hidden sticky top-0 z-30 h-15 px-3.5 sm:px-4 bg-white/85 dark:bg-[#0B0A1B]/88 backdrop-blur-2xl border-b border-slate-200/75 dark:border-[#873BFF]/15 flex items-center justify-between gap-2">
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-[264px]">
+        {/* Clean Mobile Top Header: ONLY App Logo + Name (Left) and Profile (Right) */}
+        <header className="lg:hidden sticky top-0 z-30 h-14 px-4 bg-white/95 dark:bg-[#0D0D18]/95 backdrop-blur-md border-b border-slate-200/80 dark:border-white/[0.07] flex items-center justify-between gap-3">
           <button
             type="button"
-            onClick={() => setActiveTab('home')}
-            className="group flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer"
+            onClick={() => handleMobileNav('home')}
+            className="group flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <span className="transition-transform duration-200 group-hover:scale-105">
-              <StudyFlowLogo size={27} />
-            </span>
-            <span className="font-display text-[16px] font-extrabold tracking-[-0.04em] text-slate-900 dark:text-white inline-flex items-baseline">
+            <StudyFlowLogo size={26} />
+            <span className="font-display text-[17px] font-extrabold tracking-[-0.03em] text-slate-900 dark:text-white inline-flex items-baseline">
               STUDY
-              <span className="bg-gradient-to-r from-[#873BFF] via-[#7C5CFF] to-[#16C7D9] bg-clip-text text-transparent">
-                FLO
-              </span>
-              <span className="ml-0.5 inline-block w-1.5 h-1.5 rounded-full bg-[#16C7D9] -translate-y-0.5" />
+              <span className="text-[#7C4DFF] dark:text-[#A78BFA]">FLO</span>
             </span>
           </button>
 
-          <div className="flex items-center gap-1 shrink-0">
-            <button
-              type="button"
-              onClick={toggleLanguage}
-              aria-label="Switch between Bangla and English"
-              className="h-9 px-2.5 rounded-xl bg-slate-100/90 dark:bg-[#17132D]/90 border border-slate-200/70 dark:border-white/[0.08] hover:bg-slate-200/70 dark:hover:bg-white/[0.12] flex items-center justify-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200 transition-all active:scale-95 cursor-pointer"
-            >
-              <Globe className="w-3.5 h-3.5 text-[#873BFF] dark:text-[#C4B5FD] shrink-0" />
-              <span>{isBn ? 'EN' : 'বাং'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label="Toggle dark and light theme"
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.07] transition-all active:scale-95 cursor-pointer"
-            >
-              {state.profile.theme === 'dark' ? (
-                <Sun className="w-[18px] h-[18px] text-amber-400" />
-              ) : (
-                <Moon className="w-[18px] h-[18px] text-[#873BFF]" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('assistant')}
-              aria-label="Open AI Study Assistant"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
-                activeTab === 'assistant'
-                  ? 'text-[#873BFF] dark:text-[#C4B5FD] bg-[#873BFF]/15'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.07]'
-              }`}
-            >
-              <BrainCircuit className="w-[19px] h-[19px]" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('flashcards')}
-              aria-label="Open Flashcards"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all active:scale-95 cursor-pointer ${
-                activeTab === 'flashcards'
-                  ? 'text-[#873BFF] dark:text-[#C4B5FD] bg-[#873BFF]/15'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.07]'
-              }`}
-            >
-              <GalleryVerticalEnd className="w-[19px] h-[19px]" />
-              {metrics.dueFlashcardsCount > 0 && (
-                <span className="absolute top-1.5 right-1 font-mono text-[9px] font-bold bg-[#873BFF] text-white rounded-full min-w-[16px] h-4 px-1 flex items-center justify-center shadow-sm">
-                  {metrics.dueFlashcardsCount}
-                </span>
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('settings')}
-              aria-label="Open Settings"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'text-[#873BFF] dark:text-[#C4B5FD] bg-[#873BFF]/15'
-                  : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.07]'
-              }`}
-            >
-              <SlidersHorizontal className="w-[18px] h-[18px]" />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('profile')}
-              aria-label="Open My Profile"
-              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all active:scale-95 cursor-pointer ${
-                activeTab === 'profile' ? 'bg-[#873BFF]/15' : ''
-              }`}
-            >
-              {state.profile.avatarDataUrl ? (
-                <img
-                  src={state.profile.avatarDataUrl}
-                  alt={state.profile.name}
-                  className="w-7 h-7 rounded-full object-cover ring-2 ring-[#873BFF]/50"
-                />
-              ) : (
-                <span
-                  className={`w-7 h-7 rounded-full ${avatarBgClass} font-display text-[11px] font-bold flex items-center justify-center shadow-sm`}
-                >
-                  {initials}
-                </span>
-              )}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => handleMobileNav('profile')}
+            aria-label="Open My Profile"
+            className={`flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-full border transition-colors active:scale-95 shrink-0 cursor-pointer ${
+              activeTab === 'profile'
+                ? 'bg-[#7C4DFF]/12 border-[#7C4DFF]/35 text-[#6D28D9] dark:text-[#C4B5FD]'
+                : 'bg-slate-100/90 dark:bg-white/[0.06] border-slate-200/80 dark:border-white/[0.09] text-slate-800 dark:text-slate-100'
+            }`}
+          >
+            {state.profile.avatarDataUrl ? (
+              <img
+                src={state.profile.avatarDataUrl}
+                alt={state.profile.name}
+                className="w-7 h-7 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <span
+                className={`w-7 h-7 rounded-full ${avatarBgClass} font-display text-[11px] font-bold flex items-center justify-center shrink-0`}
+              >
+                {initials}
+              </span>
+            )}
+            <span className="text-xs font-semibold max-w-[92px] truncate">
+              {state.profile.name}
+            </span>
+          </button>
         </header>
 
-        {/* Scrollable Page Viewport with Fluid Page Transition */}
+        {/* Scrollable Page Viewport with Instant, Snappy Page Entrance */}
         <main className="flex-1 w-full max-w-[1220px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-28 lg:pb-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, y: 10, scale: 0.995 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -6, scale: 0.997 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            >
-              {renderActiveView()}
-            </motion.div>
-          </AnimatePresence>
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0.35, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.12, ease: 'easeOut' }}
+          >
+            {renderActiveView()}
+          </motion.div>
         </main>
 
-        {/* Mobile Floating Glass 5-Tab Bottom Navigation Dock */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-3 pt-1 pointer-events-none">
+        {/* Mobile Study Hub Quick Menu Sheet */}
+        <AnimatePresence>
+          {mobileMenuOpen && (
+            <>
+              <motion.button
+                type="button"
+                aria-label="Close study menu"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.1 }}
+                onClick={() => setMobileMenuOpen(false)}
+                className="lg:hidden fixed inset-0 z-40 bg-black/48 backdrop-blur-xs cursor-pointer"
+              />
+              <motion.div
+                initial={{ opacity: 0, y: 14, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.97 }}
+                transition={{ duration: 0.13, ease: [0.22, 1, 0.36, 1] }}
+                className="lg:hidden fixed bottom-[84px] left-3 right-3 z-50 max-w-md mx-auto rounded-3xl bg-white/97 dark:bg-[#17132D]/97 backdrop-blur-xl border border-slate-200/90 dark:border-[#873BFF]/30 shadow-[0_20px_50px_-12px_rgba(0,0,0,0.65)] p-4"
+              >
+                <div className="flex items-center justify-between gap-2 pb-3 mb-3 border-b border-slate-200/70 dark:border-white/[0.08]">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#873BFF]/20 to-[#16C7D9]/20 text-[#873BFF] dark:text-[#C4B5FD] flex items-center justify-center">
+                      <Grip className="w-4 h-4" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white leading-tight">
+                        {isBn ? 'স্টাডি হাব' : 'Study Hub'}
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        {isBn ? 'সব টুলস ও সেটিংস এক জায়গায়' : 'All tools & settings in one place'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setMobileMenuOpen(false)}
+                    aria-label="Close study menu"
+                    className="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-300 flex items-center justify-center cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Featured Daily Goal Tracker Tile inside Study Hub Menu */}
+                <button
+                  type="button"
+                  onClick={() => handleMobileNav('goals')}
+                  className={`w-full mb-2.5 px-3.5 py-3 rounded-2xl border text-left transition-all active:scale-[0.98] cursor-pointer ${
+                    activeTab === 'goals'
+                      ? 'bg-gradient-to-r from-[#873BFF] to-[#6B2CF5] text-white border-white/20 shadow-md shadow-[#873BFF]/30'
+                      : 'bg-slate-50/95 dark:bg-white/[0.045] hover:bg-slate-100 dark:hover:bg-white/[0.08] border-slate-200/80 dark:border-white/[0.09] text-slate-900 dark:text-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-2.5 min-w-0">
+                      <Target
+                        className={`w-[18px] h-[18px] shrink-0 ${
+                          activeTab === 'goals'
+                            ? 'text-white'
+                            : dailyGoalReached
+                              ? 'text-emerald-500'
+                              : 'text-[#873BFF] dark:text-[#C4B5FD]'
+                        }`}
+                      />
+                      <span className="min-w-0">
+                        <span className="block text-xs font-semibold truncate">
+                          {isBn ? 'দৈনিক লক্ষ্য ট্র্যাকার' : 'Daily Goal Tracker'}
+                        </span>
+                        <span
+                          className={`block text-[11px] tabular-nums mt-0.5 ${
+                            activeTab === 'goals'
+                              ? 'text-purple-100'
+                              : 'text-slate-500 dark:text-slate-400'
+                          }`}
+                        >
+                          {formatCompactHm(metrics.todayMinutes)} / {formatCompactHm(dailyGoalTargetMin)}
+                        </span>
+                      </span>
+                    </span>
+                    <span
+                      className={`font-display text-xs font-bold tabular-nums shrink-0 ${
+                        activeTab === 'goals'
+                          ? 'text-white'
+                          : dailyGoalReached
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-[#7C4DFF] dark:text-[#C4B5FD]'
+                      }`}
+                    >
+                      {dailyGoalPercent}%
+                    </span>
+                  </div>
+                  <div
+                    className={`mt-2.5 h-1.5 w-full rounded-full overflow-hidden ${
+                      activeTab === 'goals' ? 'bg-white/20' : 'bg-slate-200/80 dark:bg-white/[0.08]'
+                    }`}
+                  >
+                    <div
+                      style={{ width: `${dailyGoalPercent}%` }}
+                      className={`h-full rounded-full transition-all duration-300 ${
+                        activeTab === 'goals'
+                          ? 'bg-white'
+                          : dailyGoalReached
+                            ? 'bg-emerald-500'
+                            : 'bg-[#7C4DFF]'
+                      }`}
+                    />
+                  </div>
+                </button>
+
+                {/* Study Hub Tools Grid */}
+                <div className="grid grid-cols-2 gap-2">
+                  {MOBILE_MENU_TABS.map((item) => {
+                    const Icon = item.icon;
+                    const active = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleMobileNav(item.id)}
+                        className={`relative flex items-center justify-between gap-2 px-3 py-3 rounded-2xl border text-left transition-all active:scale-95 cursor-pointer ${
+                          active
+                            ? 'bg-gradient-to-r from-[#873BFF] to-[#6B2CF5] text-white border-white/20 shadow-md shadow-[#873BFF]/30'
+                            : 'bg-slate-50/90 dark:bg-white/[0.04] hover:bg-slate-100 dark:hover:bg-white/[0.08] border-slate-200/75 dark:border-white/[0.08] text-slate-800 dark:text-slate-100'
+                        }`}
+                      >
+                        <span className="flex items-center gap-2.5 min-w-0">
+                          <Icon
+                            className={`w-[18px] h-[18px] shrink-0 ${
+                              active ? 'text-white' : 'text-[#873BFF] dark:text-[#C4B5FD]'
+                            }`}
+                          />
+                          <span className="text-xs font-semibold truncate">
+                            {getTabLabel(item.id, item.label)}
+                          </span>
+                        </span>
+                        {item.id === 'flashcards' && metrics.dueFlashcardsCount > 0 && (
+                          <span
+                            className={`font-mono text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                              active
+                                ? 'bg-white/20 text-white'
+                                : 'bg-[#873BFF]/15 text-[#873BFF] dark:text-[#C4B5FD]'
+                            }`}
+                          >
+                            {metrics.dueFlashcardsCount}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Quick Controls inside Study Hub: Language & Theme */}
+                <div className="mt-3 pt-3 border-t border-slate-200/70 dark:border-white/[0.08] grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleLanguage}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.11] border border-slate-200/70 dark:border-white/[0.08] text-xs font-semibold text-slate-800 dark:text-slate-100 transition-all active:scale-95 cursor-pointer"
+                  >
+                    <Globe className="w-4 h-4 text-[#873BFF] dark:text-[#16C7D9]" />
+                    <span>{isBn ? 'Language: English' : 'ভাষা: বাংলা'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleTheme}
+                    className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl bg-slate-100/90 dark:bg-white/[0.06] hover:bg-slate-200/80 dark:hover:bg-white/[0.11] border border-slate-200/70 dark:border-white/[0.08] text-xs font-semibold text-slate-800 dark:text-slate-100 transition-all active:scale-95 cursor-pointer"
+                  >
+                    {state.profile.theme === 'dark' ? (
+                      <>
+                        <Sun className="w-4 h-4 text-amber-400" />
+                        <span>{isBn ? 'লাইট মোড' : 'Light Mode'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="w-4 h-4 text-[#873BFF]" />
+                        <span>{isBn ? 'ডার্ক মোড' : 'Dark Mode'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+
+        {/* Mobile Clean Native-Style 5-Tab Bottom Navigation Bar */}
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 px-3 pb-2.5 pt-1 pointer-events-none">
           <nav
             aria-label="Bottom navigation"
-            className="pointer-events-auto max-w-md mx-auto h-16 bg-white/92 dark:bg-[#120F26]/92 backdrop-blur-2xl rounded-2xl border border-slate-200/85 dark:border-[#873BFF]/25 shadow-[0_12px_36px_-8px_rgba(15,23,42,0.18)] dark:shadow-[0_14px_40px_-6px_rgba(0,0,0,0.88)] grid grid-cols-5 items-center px-1.5"
+            className="pointer-events-auto max-w-md mx-auto h-[62px] bg-white/96 dark:bg-[#131220]/96 backdrop-blur-lg rounded-2xl border border-slate-200/85 dark:border-white/[0.09] shadow-[0_8px_28px_-8px_rgba(15,23,42,0.16)] dark:shadow-[0_12px_32px_-8px_rgba(0,0,0,0.85)] grid grid-cols-5 items-center px-1.5"
           >
-            {PRIMARY_TABS.map((item) => {
+            {MOBILE_MAIN_TABS.map((item) => {
               const Icon = item.icon;
-              const active = activeTab === item.id;
+              const active = activeTab === item.id && !mobileMenuOpen;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => setActiveTab(item.id)}
+                  onClick={() => handleMobileNav(item.id)}
                   className={`relative flex flex-col items-center justify-center h-12 rounded-xl transition-colors cursor-pointer active:scale-95 ${
                     active
-                      ? 'text-white'
+                      ? 'text-[#6D28D9] dark:text-[#C4B5FD]'
                       : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
                   }`}
                 >
                   {active && (
                     <motion.span
                       layoutId="mobileDockActive"
-                      transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                      className="absolute inset-0.5 rounded-xl bg-gradient-to-r from-[#873BFF] to-[#6B2CF5] shadow-[0_6px_16px_-4px_rgba(135,59,255,0.65)] border border-white/15"
+                      transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+                      className="absolute inset-0.5 rounded-xl bg-[#7C4DFF]/12 dark:bg-[#7C4DFF]/18"
                     />
                   )}
                   <Icon
-                    className={`relative z-10 w-[19px] h-[19px] transition-transform duration-150 ${
-                      active ? 'stroke-[2.2] scale-105' : 'stroke-[1.8]'
+                    className={`relative z-10 w-[19px] h-[19px] ${
+                      active ? 'stroke-[2.2]' : 'stroke-[1.75]'
                     }`}
                   />
-                  <span className="relative z-10 mt-0.5 text-[10px] font-semibold tracking-tight whitespace-nowrap">
+                  <span
+                    className={`relative z-10 mt-0.5 text-[10.5px] tracking-tight whitespace-nowrap ${
+                      active ? 'font-bold' : 'font-medium'
+                    }`}
+                  >
                     {getTabLabel(item.id, item.label)}
                   </span>
                 </button>
               );
             })}
+
+            {/* 5th Tab: Study Hub Menu */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen((v) => !v)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Open study menu"
+              className={`relative flex flex-col items-center justify-center h-12 rounded-xl transition-colors cursor-pointer active:scale-95 ${
+                mobileMenuOpen || isMenuTabActive
+                  ? 'text-[#6D28D9] dark:text-[#C4B5FD]'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+              }`}
+            >
+              {(mobileMenuOpen || isMenuTabActive) && (
+                <motion.span
+                  layoutId="mobileDockActive"
+                  transition={{ type: 'spring', stiffness: 480, damping: 36 }}
+                  className="absolute inset-0.5 rounded-xl bg-[#7C4DFF]/12 dark:bg-[#7C4DFF]/18"
+                />
+              )}
+              <Grip
+                className={`relative z-10 w-[19px] h-[19px] ${
+                  mobileMenuOpen || isMenuTabActive ? 'stroke-[2.2]' : 'stroke-[1.75]'
+                }`}
+              />
+              {metrics.dueFlashcardsCount > 0 && !mobileMenuOpen && (
+                <span className="absolute top-1.5 right-2.5 z-20 font-display text-[9px] font-bold bg-[#7C4DFF] text-white rounded-full min-w-[15px] h-[15px] px-1 flex items-center justify-center">
+                  {metrics.dueFlashcardsCount}
+                </span>
+              )}
+              <span
+                className={`relative z-10 mt-0.5 text-[10.5px] tracking-tight whitespace-nowrap ${
+                  mobileMenuOpen || isMenuTabActive ? 'font-bold' : 'font-medium'
+                }`}
+              >
+                {isBn ? 'মেনু' : 'Menu'}
+              </span>
+            </button>
           </nav>
         </div>
       </div>
+
+      {/* Compact Unique Welcome Dashboard on App Install / First Visit */}
+      <InstallWelcomeModal />
 
       {/* Offline Connectivity Indicator */}
       <OfflineIndicator />

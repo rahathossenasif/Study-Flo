@@ -1,5 +1,6 @@
 export type NavTab =
   | 'home'
+  | 'goals'
   | 'syllabus'
   | 'planner'
   | 'focus'

@@ -1,18 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Moon,
   Sun,
   User,
   Bell,
-  Download,
-  Upload,
-  RotateCcw,
-  Cloud,
-  Smartphone,
-  Info,
   Check,
-  ChevronDown,
-  ChevronUp,
   GraduationCap,
   ArrowRight,
   Globe,
@@ -31,9 +23,6 @@ export function SettingsView() {
     t,
     updateProfile,
     setActiveTab,
-    exportBackupJson,
-    importBackupJson,
-    resetDemoData,
     showToast,
   } = useStudyFlow();
   const isOnline = useOnlineStatus();
@@ -57,11 +46,6 @@ export function SettingsView() {
     setPomoFocusDraft(state.profile.pomodoroFocusMin);
     setPomoBreakDraft(state.profile.pomodoroShortBreakMin);
   }, [state.profile]);
-  const [firebaseJson, setFirebaseJson] = useState(state.profile.firebaseConfigJson ?? '');
-  const [importStatus, setImportStatus] = useState<string>('');
-  const [showFlutterDocs, setShowFlutterDocs] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,43 +58,7 @@ export function SettingsView() {
       pomodoroFocusMin: Math.max(1, Math.min(360, Number(pomoFocusDraft) || 25)),
       pomodoroShortBreakMin: Math.max(1, Math.min(60, Number(pomoBreakDraft) || 5)),
     });
-    showToast('Profile and study goals updated');
-  };
-
-  const handleExportBackup = () => {
-    const json = exportBackupJson();
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `studyflo-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    showToast('Exported offline STUDYFLO backup JSON');
-  };
-
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const content = typeof reader.result === 'string' ? reader.result : '';
-      const res = importBackupJson(content);
-      setImportStatus(res.message);
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const handleSaveFirebase = () => {
-    updateProfile({ firebaseConfigJson: firebaseJson.trim() });
-    showToast(
-      firebaseJson.trim()
-        ? 'Firebase configuration saved locally'
-        : 'Cleared Firebase config (Offline Mode active)'
-    );
+    showToast(isBn ? 'প্রোফাইল ও পড়ার লক্ষ্য আপডেট হয়েছে' : 'Profile and study goals updated');
   };
 
   return (
@@ -195,7 +143,14 @@ export function SettingsView() {
             </div>
           </div>
 
-          <div className="self-start sm:self-auto shrink-0">
+          <div className="self-start sm:self-auto shrink-0 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('studyflo:open-welcome'))}
+              className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 min-h-[44px] rounded-xl bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.14] text-slate-700 dark:text-slate-200 text-xs font-semibold transition-colors whitespace-nowrap cursor-pointer"
+            >
+              {isBn ? 'স্বাগতম কার্ড' : 'Welcome Card'}
+            </button>
             <PWAInstallButton variant="card" />
           </div>
         </div>
@@ -209,7 +164,7 @@ export function SettingsView() {
                 : `Offline Device Storage (IndexedDB + Local): ${offlineSizeKb} KB saved`}
             </span>
           </div>
-          <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">
+          <span className="font-semibold text-emerald-600 dark:text-emerald-400">
             {isOnline
               ? isBn
                 ? 'অফলাইন ক্যাশ প্রস্তুত'
@@ -452,178 +407,6 @@ export function SettingsView() {
               />
             </button>
           </div>
-        </div>
-      </section>
-
-      {/* Offline Data Backup & Restore */}
-      <section className="rounded-2xl bg-white dark:bg-[#111124] border border-slate-200/80 dark:border-white/[0.08] p-5 space-y-4">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-            Offline Data Backup & Storage
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            All syllabus topics, focus sessions, flashcards, and notes are stored locally on your device.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={handleExportBackup}
-            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-[#873BFF] hover:bg-[#732EE8] text-white text-xs font-semibold cursor-pointer"
-          >
-            <Download className="w-4 h-4" />
-            Export JSON Backup
-          </button>
-
-          <a
-            href="/api/download-zip"
-            download="STUDYFLO-app.zip"
-            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-[#16C7D9]/15 hover:bg-[#16C7D9]/25 border border-[#16C7D9]/30 text-[#0891B2] dark:text-[#16C7D9] text-xs font-semibold transition-colors cursor-pointer"
-          >
-            <Download className="w-4 h-4" />
-            {isBn ? 'সম্পূর্ণ অ্যাপ (.zip) ডাউনলোড' : 'Download App (.zip)'}
-          </a>
-
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl bg-slate-100 dark:bg-white/[0.08] hover:bg-slate-200 dark:hover:bg-white/[0.14] text-slate-800 dark:text-white text-xs font-semibold cursor-pointer"
-          >
-            <Upload className="w-4 h-4" />
-            Restore Backup
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="application/json"
-            onChange={handleImportFile}
-            className="hidden"
-          />
-
-          <button
-            type="button"
-            onClick={resetDemoData}
-            className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl border border-rose-500/30 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 text-xs font-semibold cursor-pointer"
-          >
-            <RotateCcw className="w-4 h-4" />
-            Reset Starter Data
-          </button>
-        </div>
-
-        {importStatus && (
-          <p className="text-xs text-slate-600 dark:text-slate-300">{importStatus}</p>
-        )}
-      </section>
-
-      {/* Optional Firebase Cloud Sync */}
-      <section className="rounded-2xl bg-white dark:bg-[#111124] border border-slate-200/80 dark:border-white/[0.08] p-5 space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <Cloud className="w-4 h-4 text-[#06B6D4]" />
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-              Optional Firebase Sync (Study Circle)
-            </h2>
-          </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            {state.profile.firebaseConfigJson ? 'Config stored' : 'Offline-first mode'}
-          </span>
-        </div>
-        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          STUDYFLO works completely offline without Firebase. If you deploy STUDYFLO with your own Firebase Auth & Cloud Firestore project for live multi-device Study Circle sync, paste your web/Flutter Firebase configuration snippet below.
-        </p>
-        <textarea
-          rows={3}
-          value={firebaseJson}
-          onChange={(e) => setFirebaseJson(e.target.value)}
-          placeholder='Optional: {"projectId": "studyflo-prod", "appId": "..."}'
-          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-[#0B0B1A] border border-slate-200 dark:border-white/[0.09] font-mono text-xs text-slate-900 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-[#7C3AED]"
-        />
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={handleSaveFirebase}
-            className="px-4 py-2 rounded-xl bg-slate-900 dark:bg-white/[0.1] hover:bg-slate-800 dark:hover:bg-white/[0.16] text-white text-xs font-semibold cursor-pointer"
-          >
-            Save Optional Config
-          </button>
-        </div>
-      </section>
-
-      {/* Flutter Architecture & APK Build Reference */}
-      <section className="rounded-2xl bg-white dark:bg-[#111124] border border-slate-200/80 dark:border-white/[0.08] overflow-hidden">
-        <button
-          type="button"
-          onClick={() => setShowFlutterDocs((v) => !v)}
-          className="w-full p-5 flex items-center justify-between text-left cursor-pointer"
-        >
-          <div className="flex items-center gap-3">
-            <Smartphone className="w-4 h-4 text-[#7C3AED] dark:text-[#A78BFA]" />
-            <div>
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-                Mobile Architecture & Android APK Build Guide
-              </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Flutter + SQLite (sqflite) + Riverpod + Optional Firebase project blueprint
-              </p>
-            </div>
-          </div>
-          {showFlutterDocs ? (
-            <ChevronUp className="w-4 h-4 text-slate-400" />
-          ) : (
-            <ChevronDown className="w-4 h-4 text-slate-400" />
-          )}
-        </button>
-
-        {showFlutterDocs && (
-          <div className="px-5 pb-5 pt-2 border-t border-slate-100 dark:border-white/[0.07] space-y-4 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
-                Clean Flutter Layer Structure
-              </h3>
-              <pre className="p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-[11px] overflow-x-auto">
-{`lib/
-├── main.dart
-├── core/
-│   ├── theme/studyflow_theme.dart       # OLED #050510 & Electric Purple #7C3AED
-│   ├── database/app_database.dart       # sqflite tables (subjects, chapters, topics, sessions, cards, notes)
-│   └── services/firebase_optional.dart  # Graceful offline fallback when Firebase is unconfigured
-├── features/
-│   ├── dashboard/                       # Home metrics, weekly calendar, daily goals
-│   ├── syllabus/                        # Subjects, chapters, topics & SM progress rollups
-│   ├── focus_timer/                     # Pomodoro, Custom, Stopwatch + ambient audio
-│   ├── flashcards/                      # 3D flip + SM-2 interval scheduler
-│   ├── notes/                           # Auto-saving subject notes & pin filter
-│   ├── study_circle/                    # Room codes, live status & group chat
-│   └── progress_report/                 # RepaintBoundary PNG export card`}
-              </pre>
-            </div>
-
-            <div>
-              <h3 className="font-semibold text-slate-900 dark:text-white mb-1">
-                Android Release APK & iOS Build Commands
-              </h3>
-              <pre className="p-3.5 rounded-xl bg-slate-950 text-slate-200 font-mono text-[11px] overflow-x-auto">
-{`flutter pub get
-flutter test
-flutter build apk --release --split-per-abi
-# Output: build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-# For Google Play Store App Bundle:
-flutter build appbundle --release`}
-              </pre>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* About STUDYFLO */}
-      <section className="rounded-2xl bg-white dark:bg-[#111124] border border-slate-200/80 dark:border-white/[0.08] p-5 flex items-start gap-3.5">
-        <Info className="w-5 h-5 text-[#7C3AED] dark:text-[#A78BFA] shrink-0 mt-0.5" />
-        <div>
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">About STUDYFLO</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-            STUDYFLO — Plan • Focus • Learn • Grow. Designed for sustained academic clarity with a dark OLED workspace, offline-first persistence, spaced repetition flashcards, and collaborative study circles.
-          </p>
         </div>
       </section>
     </div>

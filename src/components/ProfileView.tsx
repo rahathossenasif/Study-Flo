@@ -297,7 +297,7 @@ export function ProfileView() {
             <Flame className="w-4 h-4 text-amber-500 shrink-0" />
             <div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Study Streak</p>
-              <p className="font-mono text-sm font-bold tabular-nums text-slate-900 dark:text-white">
+              <p className="font-display text-sm font-bold tabular-nums text-slate-900 dark:text-white">
                 {profile.streakDays} days
               </p>
             </div>
@@ -307,7 +307,7 @@ export function ProfileView() {
             <Clock className="w-4 h-4 text-[#7C3AED] dark:text-[#A78BFA] shrink-0" />
             <div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Total Focus</p>
-              <p className="font-mono text-sm font-bold tabular-nums text-slate-900 dark:text-white">
+              <p className="font-display text-sm font-bold tabular-nums text-slate-900 dark:text-white">
                 {metrics.totalHoursAllTime}h
               </p>
             </div>
@@ -317,7 +317,7 @@ export function ProfileView() {
             <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
             <div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Syllabus Done</p>
-              <p className="font-mono text-sm font-bold tabular-nums text-slate-900 dark:text-white">
+              <p className="font-display text-sm font-bold tabular-nums text-slate-900 dark:text-white">
                 {metrics.completedTopics}/{metrics.totalTopics}
               </p>
             </div>
@@ -327,7 +327,7 @@ export function ProfileView() {
             <Award className="w-4 h-4 text-[#0891B2] dark:text-[#22D3EE] shrink-0" />
             <div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">Active Subjects</p>
-              <p className="font-mono text-sm font-bold tabular-nums text-slate-900 dark:text-white">
+              <p className="font-display text-sm font-bold tabular-nums text-slate-900 dark:text-white">
                 {state.subjects.length} subjects
               </p>
             </div>
